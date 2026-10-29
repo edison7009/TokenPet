@@ -1,0 +1,2 @@
+* text=auto eol=lf
+dist/index.html -whitespace linguist-generated=true

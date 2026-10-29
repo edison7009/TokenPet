@@ -1,0 +1,17 @@
+{
+  "name": "tokenpet-playground",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A tiny voxel world of colorful, bouncing eggs.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "preview": "node scripts/preview.mjs"
+  },
+  "dependencies": {
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}
