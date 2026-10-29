@@ -69,25 +69,27 @@ usageToggle.addEventListener('click', () => {
 });
 document.querySelectorAll('.usage-tool').forEach((tool) => {
   const remaining = Number(tool.dataset.remaining);
-  const tone = remaining > 60 ? '#22c55e' : remaining > 25 ? '#f1c85b' : '#fa5c57';
-  tool.style.setProperty('--usage-left', String(remaining));
+  const tone = usageTone(remaining);
+  tool.style.setProperty('--usage-ring', String(remaining === 0 ? 100 : remaining));
+  tool.style.setProperty('--usage-used', String(remaining === 0 ? 0 : 100 - remaining));
+  tool.style.setProperty('--usage-offset', String(remaining === 0 ? 100 : remaining));
   tool.style.setProperty('--usage-color', tone);
   tool.querySelector('.usage-amount').textContent = `${remaining}%`;
 });
-function usageTone(used) {
-  return used < 40 ? '#22c55e' : used < 75 ? '#f1c85b' : '#fa5c57';
+function usageTone(remaining) {
+  return remaining > 60 ? '#22c55e' : remaining > 25 ? '#f1c85b' : '#fa5c57';
 }
-function makeUsageTipRow(label, used, reset) {
+function makeUsageTipRow(label, remaining, reset) {
   const row = document.createElement('div');
   row.className = 'usage-tip-row';
   row.innerHTML = '<div class="usage-tip-row-head"><span class="usage-tip-label"></span><strong class="usage-tip-value"></strong></div><div class="usage-tip-track"><span></span></div><p class="usage-tip-reset"></p>';
   row.querySelector('.usage-tip-label').textContent = label;
-  row.querySelector('.usage-tip-value').textContent = `${used}% used`;
+  row.querySelector('.usage-tip-value').textContent = `${remaining}% left`;
   row.querySelector('.usage-tip-reset').textContent = reset;
   const fill = row.querySelector('.usage-tip-track span');
-  fill.style.width = `${used}%`;
-  fill.style.backgroundColor = usageTone(used);
-  row.querySelector('.usage-tip-value').style.color = usageTone(used);
+  fill.style.width = `${remaining}%`;
+  fill.style.backgroundColor = usageTone(remaining);
+  row.querySelector('.usage-tip-value').style.color = usageTone(remaining);
   return row;
 }
 function syncUsageTooltip() {
@@ -111,8 +113,8 @@ function syncUsageTooltip() {
   head.append(icon, title, badge);
   usageTooltip.replaceChildren(
     head,
-    makeUsageTipRow(tool.dataset.period, 100 - remaining, tool.dataset.reset),
-    makeUsageTipRow(tool.dataset.secondary, Number(tool.dataset.secondaryUsed), tool.dataset.secondaryReset),
+    makeUsageTipRow(tool.dataset.period, remaining, tool.dataset.reset),
+    makeUsageTipRow(tool.dataset.secondary, Number(tool.dataset.secondaryRemaining), tool.dataset.secondaryReset),
   );
   usageTooltip.hidden = false;
   usageTooltip.setAttribute('aria-hidden', 'false');

@@ -72,7 +72,7 @@ button { font: inherit; }
 .usage-gauge svg { display: block; width: 100%; height: 100%; transform: rotate(-90deg); }
 .usage-gauge circle { fill: none; stroke-width: 3; }
 .gauge-track { stroke: #303436; }
-.gauge-value { stroke: var(--usage-color, #22c55e); stroke-dasharray: var(--usage-left, 92) 100; stroke-linecap: round; transition: stroke .2s ease; }
+.gauge-value { stroke: var(--usage-color, #22c55e); stroke-dasharray: var(--usage-ring, 100) var(--usage-used, 0); stroke-dashoffset: var(--usage-offset, 100); stroke-linecap: round; transition: stroke .2s ease; }
 .usage-gauge img {
   position: absolute; inset: 9px; width: 20px; height: 20px; object-fit: contain;
   filter: brightness(0) invert(1);
