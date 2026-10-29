@@ -8,6 +8,7 @@ const [template, style, license] = await Promise.all([
 const html = template.replace('{{STYLE}}', style).replace('{{THREE_LICENSE}}', license.replaceAll('--', '—')).replace('{{SCRIPT}}', () => result.outputFiles[0].text.replaceAll('</script', '<\\/script'));
 await mkdir('dist', { recursive: true });
 await mkdir('licenses', { recursive: true });
+await writeFile('index.html', html);
 await writeFile('dist/index.html', html);
 await writeFile('licenses/three-LICENSE.txt', license);
-console.log(`Built dist/index.html (${(Buffer.byteLength(html) / 1024).toFixed(0)} KiB). Fully offline, no external assets.`);
+console.log(`Built index.html and dist/index.html (${(Buffer.byteLength(html) / 1024).toFixed(0)} KiB each). Fully offline, no external assets.`);
