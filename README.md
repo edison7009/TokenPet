@@ -1,5 +1,9 @@
 # TokenPet
 
+<p align="center">
+  <img src="assets/TokenPet.png" alt="TokenPet 彩色 3D 方块蛋图标" width="192" />
+</p>
+
 一个小小的方块世界，正在等待孵化。
 
 彩色 3D 体素字标、五颜六色的方块蛋。小蛋会各自随机起跳、停顿和游走，轻轻转向并避让彼此；点一颗蛋，它会跳得高一点。页面只保留顶部字标和暂停图标，没有其他可见文字。
@@ -41,6 +45,7 @@ npm run build
 - `src/main.js`：Three.js 体素模型、3D 字标、布局与跳动动画。
 - `src/style.css`：全屏布局与少量控件。
 - `src/page.html`：页面模板。
+- `assets/TokenPet.png`：TokenPet 彩色 3D 方块蛋图标，构建时内嵌为网站 favicon，也用于本页展示。
 - `index.html`：可直接发布的独立页面，脚本和样式均内嵌。
 - `dist/index.html`：同一页面的副本，保留给现有本地预览与 `dist` 部署配置。
 
