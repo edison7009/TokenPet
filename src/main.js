@@ -3,6 +3,137 @@ import * as THREE from 'three';
 const canvas = document.querySelector('#world');
 const controls = document.querySelector('#egg-controls');
 const motion = document.querySelector('#motion');
+const usageRail = document.querySelector('#usage-rail');
+const usageTools = document.querySelector('#usage-tools');
+const usageToggle = document.querySelector('#usage-toggle');
+const usageCanvas = document.querySelector('#usage-pet');
+const usageTooltip = document.querySelector('#usage-tooltip');
+let usagePinned = false, usageHovered = false;
+let usageDragPointerId = null, usageDragStartX = 0, usageDragStartY = 0, usageDragStartCenterX = 0, usageDragStartTop = 0, usageDragged = false;
+let hoveredUsageGauge = null, focusedUsageGauge = null;
+function positionUsageRail() {
+  const expandedWidth = Math.max(60, window.innerWidth <= 600 ? window.innerWidth - 20 : Math.min(680, window.innerWidth - 32));
+  usageRail.style.right = `${Math.max(0, (window.innerWidth - expandedWidth) / 2)}px`;
+  usageRail.style.top = `${Math.max(30, Math.min(window.innerHeight - 30, window.innerHeight * .78))}px`;
+}
+positionUsageRail();
+function syncUsageRail() {
+  const expanded = usagePinned || usageHovered;
+  usageRail.dataset.expanded = String(expanded);
+  usageTools.setAttribute('aria-hidden', String(!expanded));
+  usageToggle.setAttribute('aria-expanded', String(expanded));
+  usageToggle.setAttribute('aria-label', expanded ? 'Hide demo tool availability' : 'Show demo tool availability');
+}
+usageRail.addEventListener('pointerenter', (event) => { if (event.pointerType === 'mouse') { usageHovered = true; syncUsageRail(); } });
+usageRail.addEventListener('pointerleave', (event) => { if (event.pointerType === 'mouse') { usageHovered = false; syncUsageRail(); } });
+usageToggle.addEventListener('pointerdown', (event) => {
+  if (event.button !== 0) return;
+  const rect = usageRail.getBoundingClientRect();
+  usageDragPointerId = event.pointerId;
+  usageDragStartX = event.clientX;
+  usageDragStartY = event.clientY;
+  usageDragStartCenterX = rect.right - 30;
+  usageDragStartTop = rect.top + rect.height / 2;
+  usageDragged = false;
+  usageToggle.setPointerCapture(event.pointerId);
+});
+usageToggle.addEventListener('pointermove', (event) => {
+  if (usageDragPointerId !== event.pointerId) return;
+  const dx = event.clientX - usageDragStartX;
+  const dy = event.clientY - usageDragStartY;
+  if (!usageDragged && dx * dx + dy * dy < 16) return;
+  usageDragged = true;
+  const x = Math.max(30, Math.min(window.innerWidth - 30, usageDragStartCenterX + dx));
+  const y = Math.max(30, Math.min(window.innerHeight - 30, usageDragStartTop + dy));
+  usageRail.style.right = `${window.innerWidth - x - 30}px`;
+  usageRail.style.top = `${y}px`;
+});
+usageToggle.addEventListener('pointerup', (event) => {
+  if (usageDragPointerId !== event.pointerId) return;
+  usageDragPointerId = null;
+  setTimeout(() => {
+    usageDragged = false;
+    usageHovered = usageRail.matches(':hover');
+    syncUsageRail();
+  }, 0);
+});
+usageToggle.addEventListener('pointercancel', (event) => {
+  if (usageDragPointerId !== event.pointerId) return;
+  usageDragPointerId = null;
+  usageDragged = false;
+});
+usageToggle.addEventListener('click', () => {
+  if (usageDragged) { usageDragged = false; return; }
+  usagePinned = !usagePinned;
+  syncUsageRail();
+});
+document.querySelectorAll('.usage-tool').forEach((tool) => {
+  const remaining = Number(tool.dataset.remaining);
+  const tone = remaining > 60 ? '#22c55e' : remaining > 25 ? '#f1c85b' : '#fa5c57';
+  tool.style.setProperty('--usage-left', String(remaining));
+  tool.style.setProperty('--usage-color', tone);
+  tool.querySelector('.usage-amount').textContent = `${remaining}%`;
+});
+function usageTone(used) {
+  return used < 40 ? '#22c55e' : used < 75 ? '#f1c85b' : '#fa5c57';
+}
+function makeUsageTipRow(label, used, reset) {
+  const row = document.createElement('div');
+  row.className = 'usage-tip-row';
+  row.innerHTML = '<div class="usage-tip-row-head"><span class="usage-tip-label"></span><strong class="usage-tip-value"></strong></div><div class="usage-tip-track"><span></span></div><p class="usage-tip-reset"></p>';
+  row.querySelector('.usage-tip-label').textContent = label;
+  row.querySelector('.usage-tip-value').textContent = `${used}% used`;
+  row.querySelector('.usage-tip-reset').textContent = reset;
+  const fill = row.querySelector('.usage-tip-track span');
+  fill.style.width = `${used}%`;
+  fill.style.backgroundColor = usageTone(used);
+  row.querySelector('.usage-tip-value').style.color = usageTone(used);
+  return row;
+}
+function syncUsageTooltip() {
+  const gauge = hoveredUsageGauge || focusedUsageGauge;
+  if (!gauge) {
+    usageTooltip.hidden = true;
+    usageTooltip.setAttribute('aria-hidden', 'true');
+    return;
+  }
+  const tool = gauge.closest('.usage-tool');
+  const remaining = Number(tool.dataset.remaining);
+  const head = document.createElement('div');
+  head.className = 'usage-tip-head';
+  const icon = tool.querySelector('.usage-gauge img').cloneNode();
+  icon.className = 'usage-tip-icon';
+  const title = document.createElement('strong');
+  title.textContent = `${tool.querySelector('.usage-name').textContent} Usage`;
+  const badge = document.createElement('span');
+  badge.className = 'usage-tip-badge';
+  badge.textContent = 'DEMO';
+  head.append(icon, title, badge);
+  usageTooltip.replaceChildren(
+    head,
+    makeUsageTipRow(tool.dataset.period, 100 - remaining, tool.dataset.reset),
+    makeUsageTipRow(tool.dataset.secondary, Number(tool.dataset.secondaryUsed), tool.dataset.secondaryReset),
+  );
+  usageTooltip.hidden = false;
+  usageTooltip.setAttribute('aria-hidden', 'false');
+  usageTooltip.style.visibility = 'hidden';
+  const target = gauge.getBoundingClientRect();
+  const card = usageTooltip.getBoundingClientRect();
+  const left = Math.max(12, Math.min(window.innerWidth - card.width - 12, target.left + target.width / 2 - card.width / 2));
+  const above = target.top - card.height - 10 >= 12;
+  const top = above ? target.top - card.height - 10 : Math.min(window.innerHeight - card.height - 12, target.bottom + 10);
+  usageTooltip.dataset.placement = above ? 'above' : 'below';
+  usageTooltip.style.setProperty('--usage-tip-arrow-x', `${Math.max(14, Math.min(card.width - 26, target.left + target.width / 2 - left - 5))}px`);
+  usageTooltip.style.left = `${left}px`;
+  usageTooltip.style.top = `${top}px`;
+  usageTooltip.style.visibility = 'visible';
+}
+document.querySelectorAll('.usage-gauge').forEach((gauge) => {
+  gauge.addEventListener('pointerenter', () => { hoveredUsageGauge = gauge; syncUsageTooltip(); });
+  gauge.addEventListener('pointerleave', () => { if (hoveredUsageGauge === gauge) hoveredUsageGauge = null; syncUsageTooltip(); });
+  gauge.addEventListener('focus', () => { focusedUsageGauge = gauge; syncUsageTooltip(); });
+  gauge.addEventListener('blur', () => { if (focusedUsageGauge === gauge) focusedUsageGauge = null; syncUsageTooltip(); });
+});
 const palettes = [
   { name: '薄荷', shell: '#c6e2b8', patch: '#72ad8a', fleck: '#a8cb96' },
   { name: '草莓', shell: '#efb6c4', patch: '#cc7395', fleck: '#e799af' },
@@ -72,6 +203,32 @@ function start() {
     )
   );
 
+  let usageRenderer = null;
+  const usageScene = new THREE.Scene();
+  const usageCamera = new THREE.OrthographicCamera(-5.1, 5.1, 5.1, -5.1, .1, 100);
+  usageCamera.position.set(0, 5, 80);
+  usageCamera.lookAt(0, 5, 0);
+  try {
+    usageRenderer = new THREE.WebGLRenderer({ canvas: usageCanvas, antialias: true, alpha: true });
+    usageRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+    usageRenderer.setSize(38, 38, false);
+    usageRenderer.setClearColor(0x000000, 0);
+  } catch {
+    usageCanvas.hidden = true;
+  }
+  const usageBody = voxels(surface.map(([x, y, z]) => {
+    const tint = random(Math.floor((x + 4) / 2) * 11 + Math.floor(y / 2) * 17 + Math.floor((z + 4) / 2) * 23 + 13 * 31);
+    const palette = palettes[7];
+    return { x: x + .5, y: y - 4.5, z: z + .5, color: tint < .19 ? palette.patch : tint < .32 ? palette.fleck : palette.shell };
+  }));
+  const usagePet = new THREE.Group();
+  usagePet.add(usageBody);
+  const usageShadow = new THREE.Mesh(new THREE.CircleGeometry(1, 24), new THREE.MeshBasicMaterial({ color: '#4c6946', transparent: true, opacity: .4, depthWrite: false }));
+  usageShadow.position.set(0, -.45, -2);
+  usageShadow.scale.set(3.4, .62, 1);
+  usageScene.add(usageShadow, usagePet);
+  usagePet.position.y = 5;
+
   const shadowGeometry = new THREE.CircleGeometry(1, 32);
   const kickDuration = .48;
   const roamSeed = Math.random() * 10000;
@@ -96,7 +253,10 @@ function start() {
     button.setAttribute('aria-label', `${palette.name}方块蛋 ${index + 1}，点击让它跳一下`);
     controls.append(button);
     const egg = { body, shadow, group, button, seed: index * 3.9, kickAt: -100, hovered: false, scale: 1, x: 0, y: 0, height: 0, margin: 0, speed: 0, vx: 0, vy: 0, tx: 0, ty: 0, turn: 0, turnAt: 0, jumpAt: -1, jumpDuration: .4, jumpHeight: 1.5, jumpLean: 0, nextJumpAt: Math.random() * .65 };
-    button.addEventListener('click', () => { if (elapsed - egg.kickAt >= kickDuration) egg.kickAt = elapsed; if (paused) render(0); });
+    button.addEventListener('click', () => {
+      if (elapsed - egg.kickAt >= kickDuration) egg.kickAt = elapsed;
+      if (paused) render(0);
+    });
     button.addEventListener('pointerenter', () => { egg.hovered = true; });
     button.addEventListener('pointerleave', () => { egg.hovered = false; });
     return egg;
@@ -233,9 +393,10 @@ function start() {
       egg.tx = Math.abs(egg.tx) * sign;
       egg.vx = Math.abs(egg.vx) * sign;
     }
-    if (egg.y < top || egg.y > height - 22) {
+    const bottom = height - 22;
+    if (egg.y < top || egg.y > bottom) {
       const sign = egg.y < top ? 1 : -1;
-      egg.y = Math.max(top, Math.min(height - 22, egg.y));
+      egg.y = Math.max(top, Math.min(bottom, egg.y));
       egg.ty = Math.abs(egg.ty) * sign;
       egg.vy = Math.abs(egg.vy) * sign;
     }
@@ -277,6 +438,11 @@ function start() {
       character.rotation.z = Math.sin(elapsed * 1.2 + index * .8) * .035;
     });
     renderer.render(scene, camera);
+    if (usageRenderer) {
+      usagePet.rotation.set(.12, .48 + Math.sin(elapsed * .72) * .32, Math.sin(elapsed * 1.7) * .055);
+      usagePet.position.y = 5 + Math.max(0, Math.sin(elapsed * 2.1)) * .16;
+      usageRenderer.render(usageScene, usageCamera);
+    }
   }
   function tick(now) {
     const delta = last ? Math.min((now - last) / 1000, .045) : 0;
