@@ -73,6 +73,7 @@ function start() {
   );
 
   const shadowGeometry = new THREE.CircleGeometry(1, 32);
+  const hopDuration = .48;
   const roamSeed = Math.random() * 10000;
   const eggs = Array.from({ length: 20 }, (_, index) => {
     const palette = palettes[(index * 3) % palettes.length];
@@ -95,7 +96,7 @@ function start() {
     button.setAttribute('aria-label', `${palette.name}方块蛋 ${index + 1}，点击让它跳一下`);
     controls.append(button);
     const egg = { body, shadow, group, button, seed: index * 3.9, kickAt: -100, hovered: false, scale: 1, x: 0, y: 0, height: 0, margin: 0, speed: 0, vx: 0, vy: 0, tx: 0, ty: 0, turn: 0, turnAt: 0 };
-    button.addEventListener('click', () => { if (elapsed - egg.kickAt >= .75) egg.kickAt = elapsed; if (paused) render(0); });
+    button.addEventListener('click', () => { if (elapsed - egg.kickAt >= hopDuration) egg.kickAt = elapsed; if (paused) render(0); });
     button.addEventListener('pointerenter', () => { egg.hovered = true; });
     button.addEventListener('pointerleave', () => { egg.hovered = false; });
     return egg;
@@ -247,14 +248,17 @@ function start() {
       egg.group.position.set(egg.x - width / 2, height / 2 - egg.y, egg.y / height * 140);
       egg.button.style.transform = `translate3d(${egg.x - egg.height * .44}px, ${egg.y - egg.height * 1.36}px, 0)`;
       egg.button.style.zIndex = String(Math.round(egg.y));
-      const period = 2.2 + random(i + 30) * 1.4;
-      const phase = ((elapsed + egg.seed) % period) / period;
-      const flight = phase < .42 ? Math.sin(phase / .42 * Math.PI) : 0;
+      const beat = elapsed / hopDuration + (i % 2) * .5;
+      const phase = beat % 1;
+      const airtime = (phase - .12) / .72;
+      const flight = airtime > 0 && airtime < 1 ? 4 * airtime * (1 - airtime) : 0;
+      const accent = Math.floor(beat) % 2 === 0 ? 1 : .66;
       const kickTime = elapsed - egg.kickAt;
-      const kick = kickTime >= 0 && kickTime < .75 ? Math.sin(kickTime / .75 * Math.PI) : 0;
-      const lift = Math.max(flight * (1.2 + random(i + 12) * .65), kick * 3.2);
-      const land = phase > .42 && phase < .53 ? Math.sin((phase - .42) / .11 * Math.PI) : 0;
-      const squash = 1 + flight * .025 - land * .065;
+      const kick = kickTime >= 0 && kickTime < hopDuration ? Math.sin(kickTime / hopDuration * Math.PI) : 0;
+      const lift = Math.max(flight * (1.65 + random(i + 12) * .35) * accent, kick * 3.2);
+      const land = phase >= .84 ? Math.sin((phase - .84) / .16 * Math.PI) : 0;
+      const crouch = phase < .12 ? Math.sin(phase / .12 * Math.PI) : 0;
+      const squash = 1 + flight * .06 - land * .11 - crouch * .07;
       egg.body.position.y = lift;
       egg.body.scale.set(1 / Math.sqrt(squash), squash, 1 / Math.sqrt(squash));
       egg.body.rotation.set(.13, .42 + Math.sin(elapsed * .62 + egg.seed) * .09 + egg.vx / egg.speed * .10 + (egg.hovered ? .12 : 0), Math.sin(elapsed * 1.25 + egg.seed) * .034 - egg.vx * .0009 + kick * .07 * (i % 2 ? 1 : -1));
