@@ -73,6 +73,7 @@ function start() {
   );
 
   const shadowGeometry = new THREE.CircleGeometry(1, 32);
+  const roamSeed = Math.random() * 10000;
   const eggs = Array.from({ length: 20 }, (_, index) => {
     const palette = palettes[(index * 3) % palettes.length];
     const cells = surface.map(([x, y, z]) => {
@@ -93,31 +94,39 @@ function start() {
     button.type = 'button';
     button.setAttribute('aria-label', `${palette.name}方块蛋 ${index + 1}，点击让它跳一下`);
     controls.append(button);
-    const egg = { body, shadow, group, button, seed: index * 3.9, kickAt: -100, hovered: false, scale: 1, baseY: 0 };
+    const egg = { body, shadow, group, button, seed: index * 3.9, kickAt: -100, hovered: false, scale: 1, x: 0, y: 0, height: 0, margin: 0, speed: 0, vx: 0, vy: 0, tx: 0, ty: 0, turn: 0, turnAt: 0 };
     button.addEventListener('click', () => { if (elapsed - egg.kickAt >= .75) egg.kickAt = elapsed; if (paused) render(0); });
     button.addEventListener('pointerenter', () => { egg.hovered = true; });
     button.addEventListener('pointerleave', () => { egg.hovered = false; });
     return egg;
   });
 
-  const titleCells = [];
+  const logo = new THREE.Group();
+  const logoLetters = [];
+  const titleColors = ['#f5d68c', '#edafba', '#b8d8a3', '#9fcbdc', '#c5b2df', '#f0c29b', '#dfa9c4', '#a5d6c4'];
   let cursor = 0;
   for (const letter of 'TokenPet') {
+    const cells = [];
+    const tint = titleColors[logoLetters.length];
     glyphs[letter].forEach((row, y) => [...row].forEach((bit, x) => {
-      if (bit === '1') titleCells.push({ x: cursor + x, y: 6 - y, z: 0, color: '#fff1cd' });
+      if (bit === '1') cells.push({ x: x - 2, y: 3 - y, z: 0, color: tint });
     }));
+    const character = new THREE.Group();
+    character.add(
+      voxels(cells.map((cell) => ({ ...cell, x: cell.x + .22, y: cell.y - .28, z: -.75, sx: 1.28, sy: 1.28, sz: 2.25, color: '#637363' }))),
+      voxels(cells.map((cell) => ({ ...cell, sx: 1.10, sy: 1.10, sz: 1.1 })))
+    );
+    character.position.set(cursor + 2, 3, 0);
+    logoLetters.push(character);
+    logo.add(character);
     cursor += 6;
   }
-  const logo = new THREE.Group();
-  const logoBack = voxels(titleCells.map((cell) => ({ ...cell, x: cell.x + .22, y: cell.y - .28, z: -.75, sx: 1.28, sy: 1.28, sz: 2.25, color: '#637363' })));
-  const logoFace = voxels(titleCells.map((cell) => ({ ...cell, sx: 1.10, sy: 1.10, sz: 1.1 })));
-  logo.add(logoBack, logoFace);
-  logoFace.position.x = logoBack.position.x = -(cursor - 2) / 2;
+  logoLetters.forEach((character) => { character.position.x -= (cursor - 2) / 2; });
   scene.add(logo);
 
-  const grass = voxels(Array.from({ length: 84 }, (_, i) => ({ x: 0, y: 0, z: -20, color: i % 6 ? '#a9bb99' : '#f5efd1' })));
+  const grass = voxels(Array.from({ length: 84 }, (_, i) => ({ x: 0, y: 0, z: -180, color: i % 6 ? '#a9bb99' : '#f5efd1' })));
   scene.add(grass);
-  let width = 1, height = 1, logoY = 0, logoScale = 1;
+  let width = 1, height = 1, logoY = 0, logoScale = 1, fieldTop = 0;
 
   function layout() {
     width = window.innerWidth;
@@ -133,6 +142,7 @@ function start() {
     logoScale = Math.min(width * .76 / (cursor - 1), height * .12 / 7, 14.2);
     const titleTop = Math.min(44, height * .05);
     const header = titleTop + 7 * logoScale + 45;
+    fieldTop = header;
     const cellW = width / columns;
     const cellH = (height - header - 47) / rows;
     eggs.forEach((egg, i) => {
@@ -147,11 +157,20 @@ function start() {
       const margin = eggHeight * .52 + 7;
       const x = Math.max(margin, Math.min(width - margin, rawX));
       egg.scale = eggHeight / 10;
-      egg.baseY = height / 2 - y;
-      egg.group.position.set(x - width / 2, egg.baseY, (row + 1) * 3);
+      egg.height = eggHeight;
+      egg.margin = margin;
+      egg.x = x;
+      egg.y = Math.max(header + eggHeight * 1.1, Math.min(height - 22, y));
+      egg.speed = (18 + random(i + 46) * 18) * Math.min(1, Math.max(.55, width / 900));
+      const angle = random(roamSeed + i * 17) * Math.PI * 2;
+      egg.tx = Math.cos(angle);
+      egg.ty = Math.sin(angle) * .72;
+      egg.vx = egg.tx * egg.speed;
+      egg.vy = egg.ty * egg.speed;
+      egg.turnAt = elapsed + 2 + random(i + 24) * 3;
       egg.group.scale.setScalar(egg.scale);
       const hitWidth = eggHeight * .88;
-      Object.assign(egg.button.style, { left: `${x - hitWidth / 2}px`, top: `${y - eggHeight * 1.30}px`, width: `${hitWidth}px`, height: `${eggHeight * 1.38}px`, zIndex: `${row + 1}` });
+      Object.assign(egg.button.style, { left: '0px', top: '0px', width: `${hitWidth}px`, height: `${eggHeight * 1.43}px` });
     });
     logo.scale.setScalar(logoScale);
     logoY = height / 2 - titleTop - 7 * logoScale;
@@ -161,7 +180,7 @@ function start() {
       const x = (random(i + 101) - .5) * width;
       const y = (random(i + 304) - .5) * (height - 100) - 40;
       const size = 1.5 + random(i + 82) * 1.5;
-      dummy.position.set(x, y, -20);
+      dummy.position.set(x, y, -180);
       dummy.rotation.set(0, 0, i % 3 ? 0 : Math.PI / 4);
       dummy.scale.set(size, i % 5 ? size * .45 : size, .4);
       dummy.updateMatrix();
@@ -178,10 +197,56 @@ function start() {
     motion.setAttribute('aria-pressed', String(paused));
     motion.setAttribute('aria-label', paused ? '继续跳动' : '暂停跳动');
   }
+  function wander(egg, index, delta) {
+    if (delta === 0) return;
+    if (elapsed >= egg.turnAt) {
+      const angle = random(roamSeed + index * 71 + ++egg.turn * 13) * Math.PI * 2;
+      egg.tx = Math.cos(angle);
+      egg.ty = Math.sin(angle) * .72;
+      egg.turnAt = elapsed + 2 + random(index + egg.turn * 31) * 4;
+    }
+    const blend = 1 - Math.exp(-delta * 1.8);
+    egg.vx += (egg.tx * egg.speed - egg.vx) * blend;
+    egg.vy += (egg.ty * egg.speed - egg.vy) * blend;
+    let pushX = 0, pushY = 0;
+    for (const other of eggs) {
+      if (other === egg || !other.group.visible) continue;
+      const dx = egg.x - other.x;
+      const dy = (egg.y - egg.height * .5) - (other.y - other.height * .5);
+      const distanceSquared = dx * dx + dy * dy;
+      const space = (egg.height + other.height) * .42;
+      if (distanceSquared > 0 && distanceSquared < space * space) {
+        const distance = Math.sqrt(distanceSquared);
+        const force = (1 - distance / space) * 45;
+        pushX += dx / distance * force;
+        pushY += dy / distance * force;
+      }
+    }
+    egg.x += (egg.vx + pushX) * delta;
+    egg.y += (egg.vy + pushY) * delta;
+    const top = fieldTop + egg.height * 1.1;
+    if (egg.x < egg.margin || egg.x > width - egg.margin) {
+      const sign = egg.x < egg.margin ? 1 : -1;
+      egg.x = Math.max(egg.margin, Math.min(width - egg.margin, egg.x));
+      egg.tx = Math.abs(egg.tx) * sign;
+      egg.vx = Math.abs(egg.vx) * sign;
+    }
+    if (egg.y < top || egg.y > height - 22) {
+      const sign = egg.y < top ? 1 : -1;
+      egg.y = Math.max(top, Math.min(height - 22, egg.y));
+      egg.ty = Math.abs(egg.ty) * sign;
+      egg.vy = Math.abs(egg.vy) * sign;
+    }
+  }
   function render(delta) {
-    if (!paused) elapsed += delta;
+    const step = paused ? 0 : delta;
+    elapsed += step;
     eggs.forEach((egg, i) => {
       if (!egg.group.visible) return;
+      wander(egg, i, step);
+      egg.group.position.set(egg.x - width / 2, height / 2 - egg.y, egg.y / height * 140);
+      egg.button.style.transform = `translate3d(${egg.x - egg.height * .44}px, ${egg.y - egg.height * 1.36}px, 0)`;
+      egg.button.style.zIndex = String(Math.round(egg.y));
       const period = 2.2 + random(i + 30) * 1.4;
       const phase = ((elapsed + egg.seed) % period) / period;
       const flight = phase < .42 ? Math.sin(phase / .42 * Math.PI) : 0;
@@ -192,11 +257,15 @@ function start() {
       const squash = 1 + flight * .025 - land * .065;
       egg.body.position.y = lift;
       egg.body.scale.set(1 / Math.sqrt(squash), squash, 1 / Math.sqrt(squash));
-      egg.body.rotation.set(.13, .42 + Math.sin(elapsed * .62 + egg.seed) * .09 + (egg.hovered ? .12 : 0), Math.sin(elapsed * 1.25 + egg.seed) * .034 + kick * .07 * (i % 2 ? 1 : -1));
+      egg.body.rotation.set(.13, .42 + Math.sin(elapsed * .62 + egg.seed) * .09 + egg.vx / egg.speed * .10 + (egg.hovered ? .12 : 0), Math.sin(elapsed * 1.25 + egg.seed) * .034 - egg.vx * .0009 + kick * .07 * (i % 2 ? 1 : -1));
       egg.shadow.scale.set(3.7 - lift * .28, .68 - lift * .045, 1);
       egg.shadow.material.opacity = .14 - lift * .018;
     });
     logo.position.y = logoY + Math.sin(elapsed * .85) * logoScale * .06;
+    logoLetters.forEach((character, index) => {
+      character.position.y = 3 + Math.sin(elapsed * 1.6 + index * .7) * .22;
+      character.rotation.z = Math.sin(elapsed * 1.2 + index * .8) * .035;
+    });
     renderer.render(scene, camera);
   }
   function tick(now) {

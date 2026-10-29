@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#dce7cf" />
     <meta name="description" content="TokenPet — 一个正在等待孵化的方块小世界。轻轻点一下，让彩色体素蛋跳起来。" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'" />
-    <title>TokenPet · A little world, waiting to hatch.</title>
+    <title>TokenPet</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23899d79' d='M5 1h6v2h2v3h1v7h-2v2H4v-2H2V6h1V3h2z'/%3E%3Cpath fill='%23dceacb' d='M6 2h4v2h2v8h-2v2H5v-2H3V7h1V4h2z'/%3E%3Cpath fill='%23a5caad' d='M8 5h3v3H8zM5 10h3v3H5z'/%3E%3C/svg%3E" />
     <!-- {{THREE_LICENSE}} -->
     <style>{{STYLE}}</style>
@@ -18,14 +18,10 @@
       <div id="egg-controls" aria-label="彩色方块蛋"></div>
       <p id="loading" role="status"><span class="loading-cube"></span></p>
     </main>
-    <footer>
-      <span class="domain">TokenPet.ai</span>
-      <p class="hint">点一颗蛋，给它一点点好运。</p>
-      <button id="motion" type="button" aria-label="暂停跳动" aria-pressed="false">
-        <svg class="pause-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 5h3v10H6zm5 0h3v10h-3z" /></svg>
-        <svg class="play-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="m7 4 9 6-9 6z" /></svg>
-      </button>
-    </footer>
+    <button id="motion" type="button" aria-label="暂停跳动" aria-pressed="false">
+      <svg class="pause-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 5h3v10H6zm5 0h3v10h-3z" /></svg>
+      <svg class="play-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="m7 4 9 6-9 6z" /></svg>
+    </button>
     <script>{{SCRIPT}}</script>
   </body>
 </html>
